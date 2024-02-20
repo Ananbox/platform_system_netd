@@ -79,10 +79,13 @@ int main() {
     CommandListener cl;
     nm->setBroadcaster((SocketListener *) &cl);
 
+    // ananbox: permission denied
+#if 0
     if (nm->start()) {
         ALOGE("Unable to start NetlinkManager (%s)", strerror(errno));
         exit(1);
     }
+#endif
 
     // Set local DNS mode, to prevent bionic from proxying
     // back to this service, recursively.
