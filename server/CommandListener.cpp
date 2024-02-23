@@ -52,6 +52,8 @@
 #include <string>
 #include <vector>
 
+#include <cutils/properties.h>
+
 using android::net::gCtls;
 
 namespace {
@@ -268,6 +270,7 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
     }
 
     if (!strcmp(argv[1], "list")) {
+#if 0
         DIR *d;
         struct dirent *de;
 
@@ -282,6 +285,12 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
             cli->sendMsg(ResponseCode::InterfaceListResult, de->d_name, false);
         }
         closedir(d);
+#else
+        cli->sendMsg(ResponseCode::InterfaceListResult, "eth0", false);
+        cli->sendMsg(ResponseCode::InterfaceListResult, "lo", false);
+        cli->sendMsg(ResponseCode::InterfaceListResult, "sit0", false);
+        cli->sendMsg(ResponseCode::InterfaceListResult, "wlan0", false);
+#endif
         cli->sendMsg(ResponseCode::CommandOkay, "Interface list completed", false);
         return 0;
     } else {
@@ -294,6 +303,7 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
         }
 
         if (!strcmp(argv[1], "getcfg")) {
+#if 0
             struct in_addr addr;
             int prefixLength;
             unsigned char hwaddr[6];
@@ -338,6 +348,15 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
             free(msg);
 
             ifc_close();
+#else
+            static char default_mac[20] = "12:34:56:78:9a:bc";
+            char mac_address[PROPERTY_VALUE_MAX] = {0};
+            property_get("ro.ananbox.wifi.bssid", mac_address, default_mac);
+            char msg[512] = {0};
+            sprintf(msg, "%s 0.0.0.0 0 down broadcast multicast", mac_address);
+
+            cli->sendMsg(ResponseCode::InterfaceGetCfgResult, msg, false);
+#endif
             return 0;
         } else if (!strcmp(argv[1], "setcfg")) {
             // arglist: iface [addr prefixLength] flags
@@ -356,6 +375,7 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
                 // Handle flags only case
                 index = 3;
             } else {
+#if 0
                 if (ifc_set_addr(argv[2], 0)) {
                     cli->sendMsg(ResponseCode::OperationFailed, "Failed to clear address", true);
                     ifc_close();
@@ -368,6 +388,7 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
                         return 0;
                     }
                 }
+#endif
             }
 
             /* Process flags */
@@ -375,20 +396,24 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
                 char *flag = argv[i];
                 if (!strcmp(flag, "up")) {
                     ALOGD("Trying to bring up %s", argv[2]);
+#if 0
                     if (ifc_up(argv[2])) {
                         ALOGE("Error upping interface");
                         cli->sendMsg(ResponseCode::OperationFailed, "Failed to up interface", true);
                         ifc_close();
                         return 0;
                     }
+#endif
                 } else if (!strcmp(flag, "down")) {
                     ALOGD("Trying to bring down %s", argv[2]);
+#if 0
                     if (ifc_down(argv[2])) {
                         ALOGE("Error downing interface");
                         cli->sendMsg(ResponseCode::OperationFailed, "Failed to down interface", true);
                         ifc_close();
                         return 0;
                     }
+#endif
                 } else if (!strcmp(flag, "broadcast")) {
                     // currently ignored
                 } else if (!strcmp(flag, "multicast")) {
@@ -413,7 +438,9 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
             // arglist: iface
             ALOGD("Clearing all IP addresses on %s", argv[2]);
 
+#if 0
             ifc_clear_addresses(argv[2]);
+#endif
 
             cli->sendMsg(ResponseCode::CommandOkay, "Interface IP addresses cleared", false);
             return 0;
@@ -424,6 +451,7 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
                         false);
                 return 0;
             }
+#if 0
             int enable = !strncmp(argv[3], "enable", 7);
             if (InterfaceController::setIPv6PrivacyExtensions(argv[2], enable) == 0) {
                 cli->sendMsg(ResponseCode::CommandOkay, "IPv6 privacy extensions changed", false);
@@ -431,6 +459,9 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
                 cli->sendMsg(ResponseCode::OperationFailed,
                         "Failed to set ipv6 privacy extensions", true);
             }
+#else
+            cli->sendMsg(ResponseCode::CommandOkay, "IPv6 privacy extensions changed", false);
+#endif
             return 0;
         } else if (!strcmp(argv[1], "ipv6")) {
             if (argc != 4) {
@@ -440,6 +471,7 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
                 return 0;
             }
 
+#if 0
             int enable = !strncmp(argv[3], "enable", 7);
             if (InterfaceController::setEnableIPv6(argv[2], enable) == 0) {
                 cli->sendMsg(ResponseCode::CommandOkay, "IPv6 state changed", false);
@@ -447,6 +479,9 @@ int CommandListener::InterfaceCmd::runCommand(SocketClient *cli,
                 cli->sendMsg(ResponseCode::OperationFailed,
                         "Failed to change IPv6 state", true);
             }
+#else
+            cli->sendMsg(ResponseCode::CommandOkay, "IPv6 privacy extensions changed", false);
+#endif
             return 0;
         } else if (!strcmp(argv[1], "ipv6ndoffload")) {
             if (argc != 4) {
@@ -1077,8 +1112,12 @@ int CommandListener::BandwidthControlCmd::runCommand(SocketClient *cli, int argc
             sendGenericSyntaxError(cli, "setglobalalert <bytes>");
             return 0;
         }
+#if 0
         int rc = gCtls->bandwidthCtrl.setGlobalAlert(atoll(argv[2]));
         sendGenericOkFail(cli, rc);
+#else
+        sendGenericOkFail(cli, 0);
+#endif
         return 0;
     }
     if (!strcmp(argv[1], "debugsettetherglobalalert") || !strcmp(argv[1], "dstga")) {
@@ -1306,17 +1345,29 @@ int CommandListener::FirewallCmd::runCommand(SocketClient *cli, int argc,
                         "Usage: firewall enable <whitelist|blacklist>", false);
             return 0;
         }
+#if 0
         FirewallType firewallType = parseFirewallType(argv[2]);
 
         int res = gCtls->firewallCtrl.enableFirewall(firewallType);
+#else
+        int res = 0;
+#endif
         return sendGenericOkFail(cli, res);
     }
     if (!strcmp(argv[1], "disable")) {
+#if 0
         int res = gCtls->firewallCtrl.disableFirewall();
+#else
+        int res = 0;
+#endif
         return sendGenericOkFail(cli, res);
     }
     if (!strcmp(argv[1], "is_enabled")) {
+#if 0
         int res = gCtls->firewallCtrl.isFirewallEnabled();
+#else
+        int res = 0;
+#endif
         return sendGenericOkFail(cli, res);
     }
 
@@ -1580,16 +1631,26 @@ int CommandListener::NetworkCommand::runCommand(SocketClient* client, int argc, 
             return syntaxError(client, "Incorrect number of arguments");
         }
 
+#if 0
         unsigned netId = stringToNetId(argv[nextArg++]);
         const char* interface = argv[nextArg++];
         const char* destination = argv[nextArg++];
         const char* nexthop = argc > nextArg ? argv[nextArg] : NULL;
+#endif
 
         int ret;
         if (add) {
+#if 0
             ret = gCtls->netCtrl.addRoute(netId, interface, destination, nexthop, legacy, uid);
+#else
+            ret = 0;
+#endif
         } else {
+#if 0
             ret = gCtls->netCtrl.removeRoute(netId, interface, destination, nexthop, legacy, uid);
+#else
+            ret = 0;
+#endif
         }
         if (ret) {
             return operationError(client, add ? "addRoute() failed" : "removeRoute() failed", ret);
