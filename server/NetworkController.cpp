@@ -590,6 +590,10 @@ int NetworkController::checkUserNetworkAccessLocked(uid_t uid, unsigned netId) c
         return -ENONET;
     }
 
+    // ananbox: disable network permission check
+    (void) uid;
+    return 0;
+#if 0
     // If uid is INVALID_UID, this likely means that we were unable to retrieve the UID of the peer
     // (using SO_PEERCRED). Be safe and deny access to the network, even if it's valid.
     if (uid == INVALID_UID) {
@@ -609,6 +613,7 @@ int NetworkController::checkUserNetworkAccessLocked(uid_t uid, unsigned netId) c
     }
     Permission networkPermission = static_cast<PhysicalNetwork*>(network)->getPermission();
     return ((userPermission & networkPermission) == networkPermission) ? 0 : -EACCES;
+#endif
 }
 
 int NetworkController::modifyRoute(unsigned netId, const char* interface, const char* destination,
